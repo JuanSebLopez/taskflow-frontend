@@ -1,100 +1,117 @@
-import React, { useState } from 'react';
-import apiClient from '../api/apiClient';
+import React, { useMemo, useState } from 'react';
+import apiClient, { getApiErrorMessage } from '../api/apiClient';
 
-const Auth = ({ onLoginSuccess }) => {
-    const [isRegister, setIsRegister] = useState(false);
-    const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        password: ''
-    });
+const emptyForm = {
+  fullName: '',
+  email: '',
+  password: '',
+};
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        // RF-01.1 y RF-01.2: Registro y Login
-        const endpoint = isRegister ? '/auth/register' : '/auth/login';
-        
-        try {
-            const { data } = await apiClient.post(endpoint, formData);
-            localStorage.setItem('token', data.token); // Guardar JWT para RF-01.2
-            onLoginSuccess(data.user);
-        } catch (error) {
-            alert("Error: " + (error.response?.data?.message || "Error en la operación"));
-        }
-    };
+const Auth = ({ onAuthSuccess, message }) => {
+  const [mode, setMode] = useState('login');
+  const [formData, setFormData] = useState(emptyForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(message || '');
 
-    // RF-01.4: Actualización de Perfil
-    const handleUpdateProfile = async (e) => {
-        e.preventDefault();
-        try {
-            const { data } = await apiClient.patch('/auth/me', { fullName: formData.fullName });
-            alert("Perfil actualizado correctamente");
-            onLoginSuccess(data.user);
-            setIsEditingProfile(false);
-        } catch (error) {
-            alert("No se pudo actualizar el perfil");
-        }
-    };
+  const title = useMemo(() => {
+    return mode === 'register' ? 'Crea tu cuenta y entra al flujo de trabajo.' : 'Inicia sesion para abrir tu tablero.';
+  }, [mode]);
 
-    return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 20px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ textAlign: 'center', color: '#0052cc', marginBottom: '20px' }}>
-                {isRegister ? 'RF-01.1: Registro' : 'RF-01.2: Acceso'}
-            </h2>
-            
-            <form onSubmit={handleSubmit}>
-                {(isRegister || isEditingProfile) && (
-                    <div style={{ marginBottom: '15px' }}>
-                        <label>Nombre Completo (RF-01.4):</label>
-                        <input 
-                            type="text" 
-                            required 
-                            style={{ width: '100%', padding: '10px', marginTop: '5px' }}
-                            onChange={e => setFormData({...formData, fullName: e.target.value})}
-                        />
-                    </div>
-                )}
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
 
-                {!isEditingProfile && (
-                    <>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label>Correo Electrónico:</label>
-                            <input 
-                                type="email" 
-                                required 
-                                style={{ width: '100%', padding: '10px', marginTop: '5px' }}
-                                onChange={e => setFormData({...formData, email: e.target.value})}
-                            />
-                        </div>
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setError('');
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label>Contraseña (mín. 6 caracteres):</label>
-                            <input 
-                                type="password" 
-                                required 
-                                style={{ width: '100%', padding: '10px', marginTop: '5px' }}
-                                onChange={e => setFormData({...formData, password: e.target.value})}
-                            />
-                        </div>
-                    </>
-                )}
+    try {
+      const endpoint = mode === 'register' ? '/auth/register' : '/auth/login';
+      const payload = mode === 'register'
+        ? formData
+        : { email: formData.email, password: formData.password };
 
-                <button type="submit" style={{ width: '100%', padding: '12px', background: '#0052cc', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    {isRegister ? 'CREAR CUENTA' : 'ENTRAR'}
-                </button>
-            </form>
+      const { data } = await apiClient.post(endpoint, payload);
+      onAuthSuccess(data);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'No pudimos completar la autenticacion.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-            <p style={{ textAlign: 'center', marginTop: '20px' }}>
-                <span 
-                    onClick={() => setIsRegister(!isRegister)} 
-                    style={{ color: '#0052cc', cursor: 'pointer', fontSize: '14px' }}
-                >
-                    {isRegister ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}
-                </span>
-            </p>
+  return (
+    <main className="auth-shell">
+      <section className="auth-panel glass-panel">
+        <div>
+          <span className="eyebrow">TaskFlow Frontend</span>
+          <h1>{title}</h1>
+          <p className="muted">
+            Este MVP consume el backend real para login, proyectos, tablero Kanban y gestion de tareas.
+          </p>
         </div>
-    );
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {mode === 'register' && (
+            <label>
+              Nombre completo
+              <input
+                name="fullName"
+                type="text"
+                value={formData.fullName}
+                onChange={handleChange}
+                placeholder="Sebastian Quintero"
+                required
+              />
+            </label>
+          )}
+
+          <label>
+            Correo electronico
+            <input
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="sebas@taskflow.local"
+              required
+            />
+          </label>
+
+          <label>
+            Contrasena
+            <input
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Minimo 6 caracteres"
+              required
+            />
+          </label>
+
+          {(error || message) && <p className="form-error">{error || message}</p>}
+
+          <button className="primary-button" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Procesando...' : mode === 'register' ? 'Crear cuenta' : 'Entrar'}
+          </button>
+        </form>
+
+        <button
+          className="ghost-button"
+          type="button"
+          onClick={() => {
+            setMode((current) => (current === 'login' ? 'register' : 'login'));
+            setError('');
+          }}
+        >
+          {mode === 'register' ? 'Ya tienes cuenta? Inicia sesion' : 'No tienes cuenta? Registrate aqui'}
+        </button>
+      </section>
+    </main>
+  );
 };
 
 export default Auth;

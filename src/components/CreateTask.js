@@ -1,59 +1,134 @@
 import React, { useState } from 'react';
-import apiClient from '../api/apiClient';
+import apiClient, { getApiErrorMessage } from '../api/apiClient';
 
 const CreateTask = ({ projectId, boardId, columnId, onTaskCreated }) => {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [type, setType] = useState('TASK');
-    const [priority, setPriority] = useState('MEDIA');
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    type: 'TASK',
+    priority: 'MEDIA',
+    estimatedHours: '',
+    dueDate: '',
+    labelsText: '',
+  });
+  const [feedback, setFeedback] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            // El backend usará el Factory para procesar el prefijo si es BUG
-            const { data } = await apiClient.post('/tasks', {
-                title,
-                description,
-                type,
-                priority,
-                project: projectId,
-                board: boardId,
-                columnId: columnId
-            });
-            alert("Tarea creada");
-            setTitle('');
-            setDescription('');
-            onTaskCreated(); // Función para refrescar el tablero
-        } catch (error) {
-            alert("Error: " + (error.response?.data?.message || "No se pudo crear la tarea"));
-        }
-    };
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
 
-    return (
-        <div style={{ background: '#fff', padding: '15px', borderRadius: '8px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h4>Nueva Tarea</h4>
-            <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} required style={{width: '100%', marginBottom: '10px'}} />
-                <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} style={{width: '100%', marginBottom: '10px'}} />
-                
-                <select value={type} onChange={e => setType(e.target.value)} style={{marginRight: '10px'}}>
-                    <option value="TASK">Tarea</option>
-                    <option value="BUG">Error (Bug)</option>
-                    <option value="FEATURE">Funcionalidad</option>
-                    <option value="IMPROVEMENT">Mejora</option>
-                </select>
+  const buildLabels = () => {
+    return formData.labelsText
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((name, index) => ({
+        name,
+        color: ['#2563eb', '#ea580c', '#16a34a', '#7c3aed'][index % 4],
+      }));
+  };
 
-                <select value={priority} onChange={e => setPriority(e.target.value)} style={{marginRight: '10px'}}>
-                    <option value="BAJA">Baja</option>
-                    <option value="MEDIA">Media</option>
-                    <option value="ALTA">Alta</option>
-                    <option value="URGENTE">Urgente</option>
-                </select>
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setFeedback('');
 
-                <button type="submit" style={{background: '#0052cc', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px'}}>Añadir</button>
-            </form>
-        </div>
-    );
+    try {
+      await apiClient.post('/tasks', {
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        priority: formData.priority,
+        estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : undefined,
+        dueDate: formData.dueDate || undefined,
+        labels: buildLabels(),
+        project: projectId,
+        board: boardId,
+        columnId,
+      });
+
+      setFormData({
+        title: '',
+        description: '',
+        type: 'TASK',
+        priority: 'MEDIA',
+        estimatedHours: '',
+        dueDate: '',
+        labelsText: '',
+      });
+      onTaskCreated();
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'No pudimos crear la tarea.'));
+    }
+  };
+
+  return (
+    <form className="task-form" onSubmit={handleSubmit}>
+      <input
+        name="title"
+        type="text"
+        placeholder="Titulo de la tarea"
+        value={formData.title}
+        onChange={handleChange}
+        required
+      />
+      <textarea
+        name="description"
+        rows="3"
+        placeholder="Descripcion breve"
+        value={formData.description}
+        onChange={handleChange}
+      />
+
+      <div className="field-row compact-row">
+        <label>
+          Tipo
+          <select name="type" value={formData.type} onChange={handleChange}>
+            <option value="TASK">Task</option>
+            <option value="FEATURE">Feature</option>
+            <option value="BUG">Bug</option>
+            <option value="IMPROVEMENT">Improvement</option>
+          </select>
+        </label>
+
+        <label>
+          Prioridad
+          <select name="priority" value={formData.priority} onChange={handleChange}>
+            <option value="BAJA">Baja</option>
+            <option value="MEDIA">Media</option>
+            <option value="ALTA">Alta</option>
+            <option value="URGENTE">Urgente</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="field-row compact-row">
+        <label>
+          Horas estimadas
+          <input name="estimatedHours" type="number" min="0" value={formData.estimatedHours} onChange={handleChange} />
+        </label>
+
+        <label>
+          Fecha limite
+          <input name="dueDate" type="date" value={formData.dueDate} onChange={handleChange} />
+        </label>
+      </div>
+
+      <label>
+        Labels (separadas por coma)
+        <input
+          name="labelsText"
+          type="text"
+          value={formData.labelsText}
+          onChange={handleChange}
+          placeholder="backend, urgente"
+        />
+      </label>
+
+      {feedback && <p className="form-error">{feedback}</p>}
+      <button className="primary-button" type="submit">Crear tarea</button>
+    </form>
+  );
 };
 
 export default CreateTask;

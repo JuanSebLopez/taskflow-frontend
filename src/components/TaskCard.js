@@ -1,80 +1,140 @@
-import React, { useState } from 'react';
-import apiClient from '../api/apiClient';
-import TaskHistory from './TaskHistory'; // Asegúrate de tener este archivo creado
+import React, { useMemo, useState } from 'react';
+import apiClient, { getApiErrorMessage } from '../api/apiClient';
+import TaskHistory from './TaskHistory';
 
-const TaskCard = ({ task, onTaskUpdated }) => {
-    const [hours, setHours] = useState(0);
-    const [showHistory, setShowHistory] = useState(false);
+const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
+  const [nextColumnId, setNextColumnId] = useState(task.columnId);
+  const [comment, setComment] = useState('');
+  const [hours, setHours] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
-    // RF-04.9: Indicador de vencimiento
-    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETADO';
+  const totalHours = useMemo(() => {
+    return (task.timeLogs || []).reduce((sum, item) => sum + (item.hours || 0), 0);
+  }, [task.timeLogs]);
 
-    const handleAction = async (type) => {
-        try {
-            if (type === 'clone') await apiClient.post(`/tasks/${task._id}/clone`); // RF-04.8
-            if (type === 'time') await apiClient.post(`/tasks/${task._id}/time-logs`, { hours: parseFloat(hours) }); // RF-04.10
-            onTaskUpdated();
-        } catch (e) {
-            alert("Error al procesar la acción");
-        }
-    };
+  const overdue = task.dueDate && new Date(task.dueDate) < new Date() && !columns.find((column) => column._id === task.columnId)?.title.toLowerCase().includes('complet');
+  const completedSubtasks = (task.subtasks || []).filter((item) => item.isCompleted).length;
 
-    return (
-        <div style={{ 
-            background: 'white', padding: '15px', margin: '12px 0', borderRadius: '10px', 
-            boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-            borderLeft: `6px solid ${task.type === 'BUG' ? '#ef4444' : '#3b82f6'}`,
-            outline: isOverdue ? '2px solid #ff4d4f' : 'none',
-            position: 'relative'
-        }}>
-            {/* RF-04.9: Alerta Visual */}
-            {isOverdue && (
-                <div style={{ background: '#ff4d4f', color: 'white', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', position: 'absolute', top: '-10px', right: '10px', fontWeight: 'bold' }}>
-                    VENCIDA
-                </div>
-            )}
+  const runAction = async (request) => {
+    setFeedback('');
 
-            <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'bold', marginBottom: '5px' }}>{task.type}</div>
-            <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '10px' }}>{task.title}</div>
-            
-            {/* Registro de Tiempo RF-04.10 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6' }}>
-                <input 
-                    type="number" 
-                    value={hours} 
-                    onChange={e => setHours(e.target.value)} 
-                    style={{ width: '45px', padding: '3px', borderRadius: '4px', border: '1px solid #ddd' }} 
-                />
-                <button onClick={() => handleAction('time')} style={{ fontSize: '11px', cursor: 'pointer', background: '#e5e7eb', border: 'none', padding: '4px 8px', borderRadius: '4px' }}>
-                    Log Hrs
-                </button>
-                <span style={{ fontSize: '11px', color: '#374151' }}>Total: {task.totalHours || 0}h</span>
-            </div>
+    try {
+      await request();
+      setComment('');
+      setHours('');
+      onTaskUpdated();
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'No pudimos ejecutar la accion.'));
+    }
+  };
 
-            {/* Acciones Rápidas */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '5px' }}>
-                <button 
-                    onClick={() => handleAction('clone')} 
-                    style={{ flex: 1, fontSize: '10px', padding: '5px', cursor: 'pointer', background: '#f9fafb', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                >
-                    📑 Clonar (RF-04.8)
-                </button>
-                <button 
-                    onClick={() => setShowHistory(!showHistory)} 
-                    style={{ flex: 1, fontSize: '10px', padding: '5px', cursor: 'pointer', background: showHistory ? '#dbeafe' : '#f9fafb', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                >
-                    📜 {showHistory ? 'Cerrar Historial' : 'Ver Historial'}
-                </button>
-            </div>
+  return (
+    <article className={overdue ? 'task-card task-overdue' : 'task-card'}>
+      <div className="task-topline">
+        <span className="task-type">{task.type}</span>
+        <span className="status-pill priority-pill">{task.priority}</span>
+      </div>
 
-            {/* INTEGRACIÓN RF-06: Historial y Undo */}
-            {showHistory && (
-                <div style={{ marginTop: '15px', borderTop: '2px dashed #e5e7eb', paddingTop: '10px' }}>
-                    <TaskHistory task={task} onUndoSuccess={onTaskUpdated} />
-                </div>
-            )}
+      <h4>{task.title}</h4>
+      {task.description && <p className="task-description">{task.description}</p>}
+
+      <div className="task-meta-grid">
+        <span>Responsables: {task.assignees?.length || 0}</span>
+        <span>Subtareas: {completedSubtasks}/{task.subtasks?.length || 0}</span>
+        <span>Tiempo: {totalHours.toFixed(1)}h</span>
+        <span>Fecha: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Sin limite'}</span>
+      </div>
+
+      {!!task.labels?.length && (
+        <div className="label-row">
+          {task.labels.map((label) => (
+            <span key={`${task._id}-${label.name}`} className="task-label" style={{ backgroundColor: label.color }}>
+              {label.name}
+            </span>
+          ))}
         </div>
-    );
+      )}
+
+      {!projectArchived && (
+        <div className="task-actions-stack">
+          <div className="field-row compact-row">
+            <label>
+              Mover a
+              <select value={nextColumnId} onChange={(event) => setNextColumnId(event.target.value)}>
+                {columns.map((column) => (
+                  <option key={column._id} value={column._id}>{column.title}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/move`, { toColumnId: nextColumnId }))}
+              disabled={nextColumnId === task.columnId}
+            >
+              Mover
+            </button>
+          </div>
+
+          <div className="field-row compact-row">
+            <label>
+              Registrar horas
+              <input type="number" min="0" step="0.5" value={hours} onChange={(event) => setHours(event.target.value)} />
+            </label>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/time-logs`, { hours: Number(hours) }))}
+              disabled={!hours}
+            >
+              Guardar
+            </button>
+          </div>
+
+          <label>
+            Nuevo comentario
+            <textarea rows="2" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Escribe una nota rapida" />
+          </label>
+          <div className="task-button-row">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/comments`, { content: comment }))}
+              disabled={!comment.trim()}
+            >
+              Comentar
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/clone`, {}))}
+            >
+              Clonar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!!task.comments?.length && (
+        <div className="comment-list">
+          {task.comments.slice(-2).map((item) => (
+            <article key={item._id || item.createdAt} className="comment-item">
+              <strong>{item.authorName || 'Comentario'}</strong>
+              <p>{item.content}</p>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <button className="ghost-button history-toggle" type="button" onClick={() => setShowHistory((value) => !value)}>
+        {showHistory ? 'Ocultar historial' : 'Ver historial'}
+      </button>
+
+      {showHistory && <TaskHistory task={task} />}
+      {feedback && <p className="form-error">{feedback}</p>}
+    </article>
+  );
 };
 
 export default TaskCard;

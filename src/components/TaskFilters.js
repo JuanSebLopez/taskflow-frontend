@@ -1,41 +1,61 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
-const TaskFilters = ({ filters, setFilters, onSaveFilter }) => {
-    return (
-        <div style={{ background: '#fff', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            
-            {/* RF-07.1: Búsqueda por texto libre */}
-            <input 
-                type="text" 
-                placeholder="🔍 Buscar tarea (título/desc)..." 
-                value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
-                style={{ flex: '1', minWidth: '200px', padding: '8px' }}
-            />
+const TaskFilters = ({ filters, setFilters }) => {
+  const activeCount = useMemo(() => {
+    return ['search', 'priority', 'type'].filter((key) => Boolean(filters[key])).length;
+  }, [filters]);
 
-            {/* RF-07.2: Filtros específicos */}
-            <select value={filters.priority} onChange={(e) => setFilters({...filters, priority: e.target.value})} style={{ padding: '8px' }}>
-                <option value="">Todas las Prioridades</option>
-                <option value="BAJA">Baja</option>
-                <option value="MEDIA">Media</option>
-                <option value="ALTA">Alta</option>
-            </select>
-
-            <select value={filters.type} onChange={(e) => setFilters({...filters, type: e.target.value})} style={{ padding: '8px' }}>
-                <option value="">Todos los Tipos</option>
-                <option value="FEATURE">Feature</option>
-                <option value="BUG">Bug</option>
-            </select>
-
-            {/* RF-07.3: Botón para guardar filtro personalizado */}
-            <button 
-                onClick={onSaveFilter}
-                style={{ background: '#0052cc', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '4px', cursor: 'pointer' }}
-            >
-                💾 Guardar Filtro
-            </button>
+  return (
+    <section className="glass-panel filters-panel">
+      <div className="filters-header">
+        <div>
+          <span className="eyebrow">Filtros</span>
+          <h3>Busca rapido dentro del proyecto</h3>
         </div>
-    );
+        <span className="role-pill">{activeCount} activos</span>
+      </div>
+
+      <div className="filters-grid">
+        <label>
+          Texto libre
+          <input
+            type="text"
+            placeholder="Titulo o descripcion"
+            value={filters.search}
+            onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Prioridad
+          <select
+            value={filters.priority}
+            onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}
+          >
+            <option value="">Todas</option>
+            <option value="BAJA">Baja</option>
+            <option value="MEDIA">Media</option>
+            <option value="ALTA">Alta</option>
+            <option value="URGENTE">Urgente</option>
+          </select>
+        </label>
+
+        <label>
+          Tipo
+          <select
+            value={filters.type}
+            onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
+          >
+            <option value="">Todos</option>
+            <option value="TASK">Task</option>
+            <option value="FEATURE">Feature</option>
+            <option value="BUG">Bug</option>
+            <option value="IMPROVEMENT">Improvement</option>
+          </select>
+        </label>
+      </div>
+    </section>
+  );
 };
 
 export default TaskFilters;

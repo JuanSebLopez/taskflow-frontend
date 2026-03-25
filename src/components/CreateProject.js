@@ -1,41 +1,80 @@
 import React, { useState } from 'react';
-import apiClient from '../api/apiClient';
+import apiClient, { getApiErrorMessage } from '../api/apiClient';
 
 const CreateProject = ({ onProjectCreated }) => {
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        startDate: '',
-        estimatedEndDate: ''
-    });
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    startDate: '',
+    estimatedEndDate: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const { data } = await apiClient.post('/projects', formData);
-            alert("Proyecto creado exitosamente");
-            onProjectCreated(data._id);
-        } catch (error) {
-            alert("Error al crear el proyecto");
-        }
-    };
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
 
-    return (
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-            <h3>RF-02.1: Nuevo Proyecto</h3>
-            <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Nombre" required style={{marginRight: '10px'}}
-                    onChange={e => setFormData({...formData, name: e.target.value})} />
-                <input type="text" placeholder="Descripción" style={{marginRight: '10px'}}
-                    onChange={e => setFormData({...formData, description: e.target.value})} />
-                <input type="date" title="Fecha de Inicio" style={{marginRight: '10px'}}
-                    onChange={e => setFormData({...formData, startDate: e.target.value})} />
-                <input type="date" title="Fecha Estimada Fin" style={{marginRight: '10px'}}
-                    onChange={e => setFormData({...formData, estimatedEndDate: e.target.value})} />
-                <button type="submit">Crear</button>
-            </form>
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setFeedback('');
+
+    try {
+      const { data } = await apiClient.post('/projects', {
+        ...formData,
+        startDate: formData.startDate || undefined,
+        estimatedEndDate: formData.estimatedEndDate || undefined,
+      });
+      setFormData({ name: '', description: '', startDate: '', estimatedEndDate: '' });
+      setFeedback('Proyecto creado correctamente.');
+      onProjectCreated(data);
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'No pudimos crear el proyecto.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="glass-panel form-panel compact-panel">
+      <div className="panel-heading">
+        <span className="eyebrow">Proyectos</span>
+        <h3>Nuevo proyecto</h3>
+      </div>
+
+      <form className="stack-form" onSubmit={handleSubmit}>
+        <label>
+          Nombre
+          <input name="name" type="text" value={formData.name} onChange={handleChange} required />
+        </label>
+
+        <label>
+          Descripcion
+          <textarea name="description" rows="3" value={formData.description} onChange={handleChange} />
+        </label>
+
+        <div className="field-row">
+          <label>
+            Inicio
+            <input name="startDate" type="date" value={formData.startDate} onChange={handleChange} />
+          </label>
+
+          <label>
+            Fin estimado
+            <input name="estimatedEndDate" type="date" value={formData.estimatedEndDate} onChange={handleChange} />
+          </label>
         </div>
-    );
+
+        {feedback && <p className="form-helper">{feedback}</p>}
+
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Creando...' : 'Crear proyecto'}
+        </button>
+      </form>
+    </section>
+  );
 };
 
 export default CreateProject;

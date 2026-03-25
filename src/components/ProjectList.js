@@ -1,108 +1,85 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import apiClient from '../api/apiClient';
+import React, { useEffect, useState } from 'react';
+import apiClient, { getApiErrorMessage } from '../api/apiClient';
 
-const ProjectList = ({ onSelectProject }) => {
-    const [projects, setProjects] = useState([]);
+const ProjectList = ({ onSelectProject, onProjectArchived, selectedProjectId }) => {
+  const [projects, setProjects] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-    const fetchProjects = useCallback(async () => {
-        try {
-            const { data } = await apiClient.get('/projects');
-            setProjects(data);
-        } catch (error) {
-            console.error("Error al cargar proyectos");
-        }
-    }, []);
+  const loadProjects = async () => {
+    setLoading(true);
+    setError('');
 
-    useEffect(() => {
-        fetchProjects();
-    }, [fetchProjects]);
+    try {
+      const { data } = await apiClient.get('/projects');
+      setProjects(data);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'No pudimos cargar los proyectos.'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // RF-02.7: Actualizar Estado General del Proyecto
-    const handleUpdateStatus = async (projectId, newStatus) => {
-        try {
-            await apiClient.patch(`/projects/${projectId}`, { status: newStatus });
-            fetchProjects(); // Refrescar lista
-        } catch (error) {
-            alert("No se pudo cambiar el estado");
-        }
-    };
+  useEffect(() => {
+    loadProjects();
+  }, []);
 
-    // RF-02.6: Archivar Proyecto (Estado ARCHIVADO y solo lectura)
-    const handleArchive = async (projectId) => {
-        if (!window.confirm("¿Estás seguro de archivar este proyecto? Será de solo lectura.")) return;
-        try {
-            // El backend marca isArchived: true y status: 'ARCHIVADO'
-            await apiClient.post(`/projects/${projectId}/archive`);
-            fetchProjects();
-        } catch (error) {
-            alert("Error al archivar");
-        }
-    };
+  const handleArchive = async (projectId) => {
+    try {
+      await apiClient.post(`/projects/${projectId}/archive`);
+      await loadProjects();
+      onProjectArchived(projectId);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'No pudimos archivar el proyecto.'));
+    }
+  };
 
-    return (
-        <div style={{ marginTop: '20px' }}>
-            <h3 style={{ color: '#0052cc' }}>RF-02: Gestión de Proyectos</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                {projects.map(p => (
-                    <div key={p._id} style={{ 
-                        border: '1px solid #ddd', 
-                        padding: '15px', 
-                        borderRadius: '10px', 
-                        background: p.isArchived ? '#f9f9f9' : '#fff',
-                        opacity: p.isArchived ? 0.8 : 1
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h4 onClick={() => onSelectProject(p._id)} style={{ cursor: 'pointer', color: p.isArchived ? '#666' : '#0052cc', margin: 0 }}>
-                                {p.name} {p.isArchived && "(Archivado)"}
-                            </h4>
-                            <span style={{ fontSize: '10px', padding: '2px 6px', background: '#eee', borderRadius: '4px' }}>{p.status}</span>
-                        </div>
-                        
-                        {/* Barra de Progreso */}
-                        <div style={{ background: '#eee', height: '8px', borderRadius: '4px', margin: '15px 0 10px 0' }}>
-                            <div style={{ width: `${p.progress || 0}%`, background: '#4caf50', height: '100%', borderRadius: '4px' }}></div>
-                        </div>
+  return (
+    <section className="glass-panel project-list-panel">
+      <div className="panel-heading">
+        <span className="eyebrow">Workspace</span>
+        <h3>Mis proyectos</h3>
+      </div>
 
-                        {/* RF-02.7: Selector de Estado */}
-                        {!p.isArchived && (
-                            <div style={{ marginBottom: '10px' }}>
-                                <label style={{ fontSize: '11px' }}>Cambiar Estado: </label>
-                                <select 
-                                    value={p.status} 
-                                    onChange={(e) => handleUpdateStatus(p._id, e.target.value)}
-                                    style={{ fontSize: '11px', padding: '2px' }}
-                                >
-                                    <option value="PLANIFICADO">PLANIFICADO</option>
-                                    <option value="EN_PROGRESO">EN_PROGRESO</option>
-                                    <option value="PAUSADO">PAUSADO</option>
-                                    <option value="COMPLETADO">COMPLETADO</option>
-                                </select>
-                            </div>
-                        )}
+      {loading ? (
+        <p className="form-helper">Cargando proyectos...</p>
+      ) : (
+        <div className="project-list">
+          {projects.map((project) => (
+            <article
+              key={project._id}
+              className={selectedProjectId === project._id ? 'project-card selected' : 'project-card'}
+            >
+              <button className="project-select" type="button" onClick={() => onSelectProject(project)}>
+                <div>
+                  <div className="project-card-header">
+                    <strong>{project.name}</strong>
+                    <span className="status-pill">{project.status}</span>
+                  </div>
+                  <p>{project.description || 'Sin descripcion por ahora.'}</p>
+                </div>
 
-                        {/* RF-02.6: Botón de Archivar */}
-                        {!p.isArchived && (
-                            <button 
-                                onClick={() => handleArchive(p._id)}
-                                style={{ 
-                                    width: '100%', 
-                                    background: '#6c757d', 
-                                    color: 'white', 
-                                    border: 'none', 
-                                    padding: '5px', 
-                                    borderRadius: '4px', 
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                📦 Archivar Proyecto
-                            </button>
-                        )}
-                    </div>
-                ))}
-            </div>
+                <div className="project-meta">
+                  <span>Progreso {project.progress || 0}%</span>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${project.progress || 0}%` }} />
+                  </div>
+                </div>
+              </button>
+
+              {!project.isArchived && (
+                <button className="ghost-button danger-text" type="button" onClick={() => handleArchive(project._id)}>
+                  Archivar
+                </button>
+              )}
+            </article>
+          ))}
         </div>
-    );
+      )}
+
+      {error && <p className="form-error">{error}</p>}
+    </section>
+  );
 };
 
 export default ProjectList;
