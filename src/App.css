@@ -2030,6 +2030,103 @@
   gap: 1rem;
 }
 
+.project-settings-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.project-settings-summary article {
+  min-height: 96px;
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+}
+
+.project-settings-summary span,
+.project-member-item span,
+.project-danger-panel p {
+  color: var(--muted);
+}
+
+.project-settings-summary strong {
+  color: var(--accent-dark);
+  font-size: 1.2rem;
+}
+
+.project-members-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.project-member-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.project-member-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-muted-bg);
+}
+
+.project-member-item .avatar-chip {
+  width: 42px;
+  height: 42px;
+}
+
+.project-member-item > div > span {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
+}
+
+.project-control-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.project-control-panel p {
+  margin: 0.25rem 0 0;
+}
+
+.project-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.project-control-grid article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-muted-bg);
+}
+
+.project-control-grid article span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+
+.project-danger-panel {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+}
+
 .boards-heading {
   align-items: center;
 }
@@ -2101,6 +2198,10 @@
   .inline-create-board,
   .board-directory-tools,
   .project-overview-split,
+  .project-settings-summary,
+  .project-member-item,
+  .project-control-grid,
+  .project-control-grid article,
   .column-create-form,
   .column-edit-grid,
   .column-manager-item,
