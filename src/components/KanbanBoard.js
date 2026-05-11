@@ -9,9 +9,14 @@ import { getProjectId } from '../utils/projectPermissions';
 
 const initialFilters = {
   search: '',
+  searchBy: 'title',
   priority: '',
   type: '',
 };
+
+const getBoardId = (board) => board?.id || board?._id;
+const getColumnId = (column) => column?.id || column?._id;
+const getTaskId = (task) => task?.id || task?._id;
 
 const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
   const projectId = getProjectId(project);
@@ -20,11 +25,19 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
   const [filters, setFilters] = useState(initialFilters);
   const [inviteEmail, setInviteEmail] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [draggingTaskId, setDraggingTaskId] = useState('');
+  const [dropColumnId, setDropColumnId] = useState('');
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadBoardData = useCallback(async () => {
-    setLoading(true);
-    setFeedback('');
+  const loadBoardData = useCallback(async ({ silent = false } = {}) => {
+    if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setIsInitialLoading(true);
+      setFeedback('');
+    }
 
     try {
       const [boardResponse, taskResponse] = await Promise.all([
@@ -33,7 +46,7 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
       ]);
 
       const selectedBoard = boardId
-        ? boardResponse.data.find((item) => (item.id || item._id) === boardId)
+        ? boardResponse.data.find((item) => getBoardId(item) === boardId)
         : boardResponse.data[0];
 
       setBoard(selectedBoard || null);
@@ -42,19 +55,28 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos cargar el tablero del proyecto.'));
     } finally {
-      setLoading(false);
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
     }
   }, [boardId, onBoardLoaded, projectId]);
 
   useEffect(() => {
-    loadBoardData();
+    loadBoardData({ silent: false });
+  }, [loadBoardData]);
+
+  const refreshBoardData = useCallback(() => {
+    return loadBoardData({ silent: true });
   }, [loadBoardData]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const matchesSearch = !filters.search
-        || task.title.toLowerCase().includes(filters.search.toLowerCase())
-        || task.description?.toLowerCase().includes(filters.search.toLowerCase());
+      const query = filters.search.trim().toLowerCase();
+      const matchesSearch = !query
+        || (filters.searchBy === 'assignee'
+          ? task.assignees?.some((assignee) => `${assignee.fullName || ''} ${assignee.email || ''}`.toLowerCase().includes(query))
+          : filters.searchBy === 'label'
+            ? task.labels?.some((label) => label.name?.toLowerCase().includes(query))
+            : task.title.toLowerCase().includes(query));
       const matchesPriority = !filters.priority || task.priority === filters.priority;
       const matchesType = !filters.type || task.type === filters.type;
       return matchesSearch && matchesPriority && matchesType;
@@ -74,6 +96,26 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
     }
   };
 
+  const handleTaskDrop = async (columnId) => {
+    const task = tasks.find((item) => getTaskId(item) === draggingTaskId);
+    setDropColumnId('');
+
+    if (!task || task.columnId === columnId || project.isArchived) {
+      setDraggingTaskId('');
+      return;
+    }
+
+    try {
+      await apiClient.post(`/tasks/${getTaskId(task)}/move`, { toColumnId: columnId });
+      setFeedback('Tarea movida correctamente.');
+      await refreshBoardData();
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'No pudimos mover la tarea.'));
+    } finally {
+      setDraggingTaskId('');
+    }
+  };
+
   const handleStatusChange = async (event) => {
     const nextStatus = event.target.value;
 
@@ -85,7 +127,7 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
     }
   };
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <section className="glass-panel empty-state">
         <h3>Cargando tablero...</h3>
@@ -140,16 +182,49 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
       </section>
 
       <ProjectDashboard board={board} tasks={tasks} />
-      <TaskFilters filters={filters} setFilters={setFilters} />
+
+      <section className="glass-panel board-workbench">
+        <div className="board-workbench-header">
+          <div>
+            <span className="eyebrow">Tareas</span>
+            <h3>Trabajo del tablero</h3>
+          </div>
+          {isRefreshing && <span className="role-pill">Actualizando...</span>}
+          <button
+            className="primary-button compact-action"
+            type="button"
+            onClick={() => setIsTaskModalOpen(true)}
+            disabled={project.isArchived}
+          >
+            + Nueva tarea
+          </button>
+        </div>
+
+        <TaskFilters filters={filters} setFilters={setFilters} />
+      </section>
+
       {feedback && <p className="form-helper board-feedback">{feedback}</p>}
 
       <section className="board-columns">
-        {board.columns.map((column, index) => {
-          const columnTasks = filteredTasks.filter((task) => task.columnId === column._id);
+        {board.columns.map((column) => {
+          const columnId = getColumnId(column);
+          const columnTasks = filteredTasks.filter((task) => task.columnId === columnId);
           const isWipExceeded = column.wipLimit > 0 && columnTasks.length > column.wipLimit;
 
           return (
-            <article key={column._id} className={isWipExceeded ? 'kanban-column column-alert' : 'kanban-column'}>
+            <article
+              key={columnId}
+              className={[
+                isWipExceeded ? 'kanban-column column-alert' : 'kanban-column',
+                dropColumnId === columnId ? 'column-drop-target' : '',
+              ].filter(Boolean).join(' ')}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDropColumnId(columnId);
+              }}
+              onDragLeave={() => setDropColumnId('')}
+              onDrop={() => handleTaskDrop(columnId)}
+            >
               <header className="column-header">
                 <div>
                   <strong>{column.title}</strong>
@@ -158,34 +233,53 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
                 <span className="role-pill">WIP {column.wipLimit || 'Sin limite'}</span>
               </header>
 
-              {index === 0 && !project.isArchived && (
-                <CreateTask
-                  projectId={projectId}
-                  boardId={board._id}
-                  columnId={column._id}
-                  onTaskCreated={loadBoardData}
-                />
-              )}
-
               <div className="task-stack">
                 {columnTasks.length ? (
                   columnTasks.map((task) => (
-                    <TaskCard
-                      key={task._id}
-                      task={task}
-                      columns={board.columns}
-                      projectArchived={project.isArchived}
-                      onTaskUpdated={loadBoardData}
-                    />
+                    <div
+                      key={getTaskId(task)}
+                      draggable={!project.isArchived}
+                      onDragStart={() => setDraggingTaskId(getTaskId(task))}
+                    >
+                      <TaskCard
+                        task={task}
+                        columns={board.columns}
+                        projectArchived={project.isArchived}
+                        onTaskUpdated={refreshBoardData}
+                      />
+                    </div>
                   ))
                 ) : (
-                  <p className="empty-column">Sin tareas en esta columna.</p>
+                  <p className="empty-column">{draggingTaskId ? 'Suelta aqui para mover la tarea.' : 'Sin tareas en esta columna.'}</p>
                 )}
               </div>
             </article>
           );
         })}
       </section>
+
+      {isTaskModalOpen && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setIsTaskModalOpen(false)}>
+          <section className="task-modal" role="dialog" aria-modal="true" aria-labelledby="create-task-title" onClick={(event) => event.stopPropagation()}>
+            <div className="panel-heading">
+              <div>
+                <span className="eyebrow">Nueva tarea</span>
+                <h3 id="create-task-title">Crear tarea</h3>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setIsTaskModalOpen(false)} aria-label="Cerrar modal">
+                x
+              </button>
+            </div>
+            <CreateTask
+              projectId={projectId}
+              boardId={getBoardId(board)}
+              columnId={getColumnId(board.columns[0])}
+              onCancel={() => setIsTaskModalOpen(false)}
+              onTaskCreated={refreshBoardData}
+            />
+          </section>
+        </div>
+      )}
     </section>
   );
 };

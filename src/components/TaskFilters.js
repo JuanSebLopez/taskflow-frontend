@@ -6,24 +6,36 @@ const TaskFilters = ({ filters, setFilters }) => {
   }, [filters]);
 
   return (
-    <section className="glass-panel filters-panel">
+    <section className="filters-panel">
       <div className="filters-header">
         <div>
           <span className="eyebrow">Filtros</span>
-          <h3>Busca rapido dentro del proyecto</h3>
+          <h3>Filtra tareas de este tablero</h3>
         </div>
         <span className="role-pill">{activeCount} activos</span>
       </div>
 
       <div className="filters-grid">
         <label>
-          Texto libre
+          Buscar
           <input
             type="text"
-            placeholder="Titulo o descripcion"
+            placeholder={filters.searchBy === 'assignee' ? 'Nombre del asignado' : filters.searchBy === 'label' ? 'Etiqueta' : 'Titulo de la tarea'}
             value={filters.search}
             onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
           />
+        </label>
+
+        <label>
+          Buscar por
+          <select
+            value={filters.searchBy}
+            onChange={(event) => setFilters((current) => ({ ...current, searchBy: event.target.value, search: '' }))}
+          >
+            <option value="title">Titulo</option>
+            <option value="assignee">Asignado</option>
+            <option value="label">Etiqueta</option>
+          </select>
         </label>
 
         <label>

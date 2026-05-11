@@ -49,6 +49,14 @@ const AppRoutes = () => (
       )}
     />
     <Route
+      path="/app/projects/:projectId/boards"
+      element={(
+        <ProtectedRoute>
+          <WorkspacePage section="workspace" />
+        </ProtectedRoute>
+      )}
+    />
+    <Route
       path="/app/projects/:projectId/boards/:boardId"
       element={(
         <ProtectedRoute>

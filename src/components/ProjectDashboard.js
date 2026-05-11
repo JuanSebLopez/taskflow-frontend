@@ -7,9 +7,10 @@ const ProjectDashboard = ({ board, tasks }) => {
 
   const stats = useMemo(() => {
     const completed = completedColumn
-      ? tasks.filter((task) => task.columnId === completedColumn._id).length
+      ? tasks.filter((task) => task.columnId === (completedColumn._id || completedColumn.id)).length
       : 0;
-    const overdue = tasks.filter((task) => task.dueDate && new Date(task.dueDate) < new Date() && task.columnId !== completedColumn?._id).length;
+    const completedColumnId = completedColumn?._id || completedColumn?.id;
+    const overdue = tasks.filter((task) => task.dueDate && new Date(task.dueDate) < new Date() && task.columnId !== completedColumnId).length;
     const totalHours = tasks.reduce((sum, task) => sum + (task.timeLogs || []).reduce((inner, item) => inner + (item.hours || 0), 0), 0);
 
     return {
