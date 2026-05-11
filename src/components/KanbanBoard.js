@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import apiClient, { getApiErrorMessage } from '../api/apiClient';
+import ColumnManager from './ColumnManager';
 import CreateTask from './CreateTask';
 import ProjectDashboard from './ProjectDashboard';
 import TaskCard from './TaskCard';
+import TaskDetailModal from './TaskDetailModal';
 import TaskFilters from './TaskFilters';
 import { projectStatusOptions } from '../utils/enumLabels';
-import { getProjectId } from '../utils/projectPermissions';
+import { getProjectId, getProjectPermissions } from '../utils/projectPermissions';
+import { useAuth } from '../context/AuthContext';
 
 const initialFilters = {
   search: '',
@@ -19,7 +22,9 @@ const getColumnId = (column) => column?.id || column?._id;
 const getTaskId = (task) => task?.id || task?._id;
 
 const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
+  const { user } = useAuth();
   const projectId = getProjectId(project);
+  const permissions = getProjectPermissions({ user, project });
   const [board, setBoard] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [filters, setFilters] = useState(initialFilters);
@@ -27,7 +32,10 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
   const [feedback, setFeedback] = useState('');
   const [draggingTaskId, setDraggingTaskId] = useState('');
   const [dropColumnId, setDropColumnId] = useState('');
+  const [isColumnManagerOpen, setIsColumnManagerOpen] = useState(false);
+  const [isTaskDetailLoading, setIsTaskDetailLoading] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -52,6 +60,7 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
       setBoard(selectedBoard || null);
       onBoardLoaded?.(selectedBoard || null);
       setTasks(taskResponse.data);
+      return { board: selectedBoard || null, tasks: taskResponse.data };
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos cargar el tablero del proyecto.'));
     } finally {
@@ -67,6 +76,40 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
   const refreshBoardData = useCallback(() => {
     return loadBoardData({ silent: true });
   }, [loadBoardData]);
+
+  const handleBoardChanged = (updatedBoard) => {
+    setBoard(updatedBoard);
+    onBoardLoaded?.(updatedBoard);
+    refreshBoardData();
+  };
+
+  const handleTaskDetailChanged = async (taskId) => {
+    const [taskResponse] = await Promise.all([
+      apiClient.get(`/tasks/${taskId}`),
+      refreshBoardData(),
+    ]);
+    const updatedTask = taskResponse.data.task || taskResponse.data;
+
+    if (updatedTask) {
+      setSelectedTask(updatedTask);
+    }
+  };
+
+  const handleOpenTaskDetails = async (task) => {
+    const taskId = getTaskId(task);
+    setSelectedTask(task);
+    setIsTaskDetailLoading(true);
+    setFeedback('');
+
+    try {
+      const { data } = await apiClient.get(`/tasks/${taskId}`);
+      setSelectedTask(data.task || data);
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, 'No pudimos cargar el detalle de la tarea.'));
+    } finally {
+      setIsTaskDetailLoading(false);
+    }
+  };
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -190,17 +233,37 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
             <h3>Trabajo del tablero</h3>
           </div>
           {isRefreshing && <span className="role-pill">Actualizando...</span>}
-          <button
-            className="primary-button compact-action"
-            type="button"
-            onClick={() => setIsTaskModalOpen(true)}
-            disabled={project.isArchived}
-          >
-            + Nueva tarea
-          </button>
+          <div className="board-workbench-actions">
+            {permissions.canManageBoard && (
+              <button
+                className="ghost-button compact-action"
+                type="button"
+                onClick={() => setIsColumnManagerOpen((value) => !value)}
+              >
+                Columnas
+              </button>
+            )}
+            <button
+              className="primary-button compact-action"
+              type="button"
+              onClick={() => setIsTaskModalOpen(true)}
+              disabled={project.isArchived}
+            >
+              + Nueva tarea
+            </button>
+          </div>
         </div>
 
         <TaskFilters filters={filters} setFilters={setFilters} />
+
+        {isColumnManagerOpen && permissions.canManageBoard && (
+          <ColumnManager
+            board={board}
+            tasks={tasks}
+            onBoardChanged={handleBoardChanged}
+            onClose={() => setIsColumnManagerOpen(false)}
+          />
+        )}
       </section>
 
       {feedback && <p className="form-helper board-feedback">{feedback}</p>}
@@ -244,6 +307,7 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
                       <TaskCard
                         task={task}
                         columns={board.columns}
+                        onOpenDetails={handleOpenTaskDetails}
                         projectArchived={project.isArchived}
                         onTaskUpdated={refreshBoardData}
                       />
@@ -279,6 +343,16 @@ const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
             />
           </section>
         </div>
+      )}
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          loading={isTaskDetailLoading}
+          projectArchived={project.isArchived}
+          onClose={() => setSelectedTask(null)}
+          onTaskChanged={handleTaskDetailChanged}
+        />
       )}
     </section>
   );

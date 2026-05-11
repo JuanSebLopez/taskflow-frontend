@@ -29,6 +29,7 @@ export const getProjectPermissions = ({ user, project }) => {
     canViewProject: isAdmin || isOwner || isMember,
     canEditProject: !isReadOnly && (isAdmin || isOwner),
     canArchiveProject: !isReadOnly && (isAdmin || isOwner),
+    canCloneProject: isAdmin || isOwner || isMember,
     canInviteMembers: !isReadOnly && (isAdmin || isOwner),
     canManageBoard: !isReadOnly && (isAdmin || isOwner || (isProjectManager && isMember)),
     canCoordinateTasks: !isReadOnly && (isAdmin || isOwner || (isProjectManager && isMember)),

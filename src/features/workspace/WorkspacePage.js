@@ -207,6 +207,20 @@ const WorkspacePage = ({ section = 'workspace' }) => {
     navigate(`/app/projects/${getProjectId(project)}`);
   };
 
+  const handleProjectUpdated = useCallback((project) => {
+    setSelectedProject((current) => (
+      getProjectId(current) === getProjectId(project)
+        ? { ...current, ...project }
+        : project
+    ));
+    setProjects((current) => current.map((item) => (
+      getProjectId(item) === getProjectId(project)
+        ? { ...item, ...project }
+        : item
+    )));
+    setProjectRefreshToken((value) => value + 1);
+  }, []);
+
   const handleBoardLoaded = useCallback((board) => {
     setSelectedBoard(board || null);
   }, []);
@@ -327,10 +341,14 @@ const WorkspacePage = ({ section = 'workspace' }) => {
                 project={selectedProject}
                 boardId={boardId}
                 onBoardLoaded={handleBoardLoaded}
-                onProjectUpdated={setSelectedProject}
+                onProjectUpdated={handleProjectUpdated}
               />
             ) : selectedProject && isSettingsRoute ? (
-              <ProjectSettings project={selectedProject} onProjectUpdated={setSelectedProject} />
+              <ProjectSettings
+                project={selectedProject}
+                onProjectCreated={handleProjectCreated}
+                onProjectUpdated={handleProjectUpdated}
+              />
             ) : selectedProject && isBoardsRoute ? (
               <ProjectOverview project={selectedProject} view="boards" />
             ) : selectedProject ? (
