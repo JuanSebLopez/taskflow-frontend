@@ -12,9 +12,51 @@
   --danger: #c2410c;
   --success: #2f855a;
   --shadow: 0 20px 45px rgba(80, 52, 24, 0.12);
+  --page-bg:
+    radial-gradient(circle at top left, rgba(14, 116, 144, 0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(194, 65, 12, 0.12), transparent 25%),
+    linear-gradient(180deg, #faf6ef 0%, #f4ede2 100%);
+  --field-bg: rgba(255, 255, 255, 0.95);
+  --button-primary: linear-gradient(135deg, #0f766e, #155e75);
+  --button-secondary: linear-gradient(135deg, #c05621, #9a3412);
+  --button-ghost-bg: rgba(14, 116, 144, 0.09);
+  --button-ghost-hover: rgba(14, 116, 144, 0.16);
+  --panel-muted-bg: #f8fafc;
+  --workspace-bg:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(239, 246, 255, 0.72)),
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.18), transparent 34%);
   --radius-xl: 28px;
   --radius-lg: 20px;
   --radius-md: 14px;
+}
+
+:root[data-theme='DARK'] {
+  --bg: #101416;
+  --bg-soft: rgba(21, 26, 29, 0.82);
+  --surface: rgba(29, 34, 38, 0.94);
+  --surface-strong: #242b30;
+  --ink: #f3f7f7;
+  --muted: #aab8b8;
+  --line: rgba(203, 213, 225, 0.16);
+  --accent: #2dd4bf;
+  --accent-dark: #7dd3c7;
+  --accent-soft: rgba(45, 212, 191, 0.12);
+  --danger: #fb923c;
+  --success: #86efac;
+  --shadow: 0 22px 48px rgba(0, 0, 0, 0.3);
+  --page-bg:
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.14), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(251, 146, 60, 0.08), transparent 30%),
+    linear-gradient(180deg, #101416 0%, #151a1d 100%);
+  --field-bg: rgba(18, 22, 25, 0.95);
+  --button-primary: linear-gradient(135deg, #0f8f83, #2f7c72);
+  --button-secondary: linear-gradient(135deg, #3f4750, #252c32);
+  --button-ghost-bg: rgba(45, 212, 191, 0.12);
+  --button-ghost-hover: rgba(45, 212, 191, 0.2);
+  --panel-muted-bg: #191f23;
+  --workspace-bg:
+    linear-gradient(180deg, rgba(18, 23, 26, 0.96), rgba(22, 28, 31, 0.9)),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.1), transparent 34%);
 }
 
 * {
@@ -24,10 +66,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(14, 116, 144, 0.14), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(194, 65, 12, 0.12), transparent 25%),
-    linear-gradient(180deg, #faf6ef 0%, #f4ede2 100%);
+  background: var(--page-bg);
   color: var(--ink);
 }
 
@@ -55,7 +94,7 @@ select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--field-bg);
   border-radius: 12px;
   padding: 0.85rem 0.95rem;
   color: var(--ink);

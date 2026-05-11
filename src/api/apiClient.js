@@ -9,8 +9,22 @@ const apiClient = axios.create({
   },
 });
 
+let refreshSessionRequest = null;
+
+const clearStoredSession = () => {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('token');
+};
+
+const persistSessionTokens = ({ accessToken, refreshToken }) => {
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
+  localStorage.removeItem('token');
+};
+
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -19,8 +33,43 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    const status = error.response?.status;
+    const refreshToken = localStorage.getItem('refreshToken');
+    const isAuthRefreshRequest = originalRequest?.url?.includes('/auth/refresh');
+    const isLoginRequest = originalRequest?.url?.includes('/auth/login');
+
+    if (status !== 401 || !refreshToken || originalRequest?._retry || isAuthRefreshRequest || isLoginRequest) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    try {
+      if (!refreshSessionRequest) {
+        refreshSessionRequest = axios.post(`${apiBaseUrl}/auth/refresh`, { refreshToken });
+      }
+
+      const { data } = await refreshSessionRequest;
+      persistSessionTokens(data);
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      clearStoredSession();
+      return Promise.reject(refreshError);
+    } finally {
+      refreshSessionRequest = null;
+    }
+  }
+);
+
 export const getApiErrorMessage = (error, fallback = 'Ocurrio un error inesperado.') => {
   return error.response?.data?.message || fallback;
 };
+
+export { clearStoredSession, persistSessionTokens };
 
 export default apiClient;

@@ -29,7 +29,7 @@ const CreateProject = ({ onProjectCreated }) => {
       });
       setFormData({ name: '', description: '', startDate: '', estimatedEndDate: '' });
       setFeedback('Proyecto creado correctamente.');
-      onProjectCreated(data);
+      onProjectCreated(data.project || data);
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos crear el proyecto.'));
     } finally {

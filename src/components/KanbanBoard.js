@@ -4,6 +4,8 @@ import CreateTask from './CreateTask';
 import ProjectDashboard from './ProjectDashboard';
 import TaskCard from './TaskCard';
 import TaskFilters from './TaskFilters';
+import { projectStatusOptions } from '../utils/enumLabels';
+import { getProjectId } from '../utils/projectPermissions';
 
 const initialFilters = {
   search: '',
@@ -11,7 +13,8 @@ const initialFilters = {
   type: '',
 };
 
-const KanbanBoard = ({ project, onProjectUpdated }) => {
+const KanbanBoard = ({ boardId, project, onBoardLoaded, onProjectUpdated }) => {
+  const projectId = getProjectId(project);
   const [board, setBoard] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [filters, setFilters] = useState(initialFilters);
@@ -25,18 +28,23 @@ const KanbanBoard = ({ project, onProjectUpdated }) => {
 
     try {
       const [boardResponse, taskResponse] = await Promise.all([
-        apiClient.get(`/boards/project/${project._id}`),
-        apiClient.get(`/tasks?projectId=${project._id}`),
+        apiClient.get(`/boards/project/${projectId}`),
+        apiClient.get(`/tasks?projectId=${projectId}${boardId ? `&boardId=${boardId}` : ''}`),
       ]);
 
-      setBoard(boardResponse.data[0] || null);
+      const selectedBoard = boardId
+        ? boardResponse.data.find((item) => (item.id || item._id) === boardId)
+        : boardResponse.data[0];
+
+      setBoard(selectedBoard || null);
+      onBoardLoaded?.(selectedBoard || null);
       setTasks(taskResponse.data);
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos cargar el tablero del proyecto.'));
     } finally {
       setLoading(false);
     }
-  }, [project._id]);
+  }, [boardId, onBoardLoaded, projectId]);
 
   useEffect(() => {
     loadBoardData();
@@ -58,7 +66,7 @@ const KanbanBoard = ({ project, onProjectUpdated }) => {
     setFeedback('');
 
     try {
-      await apiClient.post(`/projects/${project._id}/members`, { email: inviteEmail });
+      await apiClient.post(`/projects/${projectId}/members`, { email: inviteEmail });
       setInviteEmail('');
       setFeedback('Miembro agregado al proyecto.');
     } catch (error) {
@@ -70,8 +78,8 @@ const KanbanBoard = ({ project, onProjectUpdated }) => {
     const nextStatus = event.target.value;
 
     try {
-      const { data } = await apiClient.patch(`/projects/${project._id}`, { status: nextStatus });
-      onProjectUpdated(data);
+      const { data } = await apiClient.patch(`/projects/${projectId}`, { status: nextStatus });
+      onProjectUpdated(data.project || data);
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos actualizar el estado del proyecto.'));
     }
@@ -99,19 +107,20 @@ const KanbanBoard = ({ project, onProjectUpdated }) => {
     <section className="workspace-board">
       <section className="glass-panel board-topbar">
         <div>
-          <span className="eyebrow">Proyecto activo</span>
-          <h3>{project.name}</h3>
-          <p>{project.description || 'Sin descripcion adicional.'}</p>
+          <span className="eyebrow">Tablero</span>
+          <h3>{board.name}</h3>
+          <p>{project.name}</p>
         </div>
 
         <div className="board-actions">
           <label>
             Estado
             <select value={project.status} onChange={handleStatusChange} disabled={project.isArchived}>
-              <option value="PLANIFICADO">Planificado</option>
-              <option value="EN_PROGRESO">En progreso</option>
-              <option value="PAUSADO">Pausado</option>
-              <option value="COMPLETADO">Completado</option>
+              {projectStatusOptions
+                .filter((option) => option.value !== 'ARCHIVADO')
+                .map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
             </select>
           </label>
 
@@ -146,12 +155,12 @@ const KanbanBoard = ({ project, onProjectUpdated }) => {
                   <strong>{column.title}</strong>
                   <span>{columnTasks.length} tareas</span>
                 </div>
-                <span className="role-pill">WIP {column.wipLimit || '∞'}</span>
+                <span className="role-pill">WIP {column.wipLimit || 'Sin limite'}</span>
               </header>
 
               {index === 0 && !project.isArchived && (
                 <CreateTask
-                  projectId={project._id}
+                  projectId={projectId}
                   boardId={board._id}
                   columnId={column._id}
                   onTaskCreated={loadBoardData}

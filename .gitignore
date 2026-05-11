@@ -10,6 +10,7 @@
 
 # production
 /build
+taskflow-frontend-dev.log
 
 # misc
 .DS_Store
