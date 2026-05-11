@@ -1,13 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import apiClient, { getApiErrorMessage } from '../api/apiClient';
-import TaskHistory from './TaskHistory';
 
-const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
+const TaskCard = ({ task, columns, onOpenDetails, projectArchived, onTaskUpdated }) => {
   const [nextColumnId, setNextColumnId] = useState(task.columnId);
-  const [comment, setComment] = useState('');
-  const [hours, setHours] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [feedback, setFeedback] = useState('');
   const taskId = task.id || task._id;
 
@@ -25,8 +21,6 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
 
     try {
       await request();
-      setComment('');
-      setHours('');
       onTaskUpdated();
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos ejecutar la accion.'));
@@ -101,56 +95,10 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
         </div>
       )}
 
-      {!projectArchived && (
-        <div className="task-actions-stack">
-          <div className="field-row compact-row">
-            <label>
-              Registrar horas
-              <input type="number" min="0" step="0.5" value={hours} onChange={(event) => setHours(event.target.value)} />
-            </label>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => runAction(() => apiClient.post(`/tasks/${taskId}/time-logs`, { hours: Number(hours) }))}
-              disabled={!hours}
-            >
-              Guardar
-            </button>
-          </div>
-
-          <label>
-            Nuevo comentario
-            <textarea rows="2" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Escribe una nota rapida" />
-          </label>
-          <div className="task-button-row">
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => runAction(() => apiClient.post(`/tasks/${taskId}/comments`, { content: comment }))}
-              disabled={!comment.trim()}
-            >
-              Comentar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!!task.comments?.length && (
-        <div className="comment-list">
-          {task.comments.slice(-2).map((item) => (
-            <article key={item._id || item.createdAt} className="comment-item">
-              <strong>{item.authorName || 'Comentario'}</strong>
-              <p>{item.content}</p>
-            </article>
-          ))}
-        </div>
-      )}
-
-      <button className="ghost-button history-toggle" type="button" onClick={() => setShowHistory((value) => !value)}>
-        {showHistory ? 'Ocultar historial' : 'Ver historial'}
+      <button className="ghost-button compact-action task-expand-button" type="button" onClick={() => onOpenDetails(task)}>
+        Extender
       </button>
 
-      {showHistory && <TaskHistory task={task} />}
       {feedback && <p className="form-error">{feedback}</p>}
     </article>
   );

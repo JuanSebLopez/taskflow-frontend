@@ -558,6 +558,11 @@
   font-size: 0.86rem;
 }
 
+.task-meta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.55rem;
+}
+
 .task-stack {
   display: grid;
   gap: 0.9rem;
@@ -631,6 +636,12 @@
   border-radius: 14px;
   background: var(--surface-strong);
   box-shadow: var(--shadow);
+}
+
+.task-expand-button {
+  margin-top: 0.85rem;
+  justify-content: center;
+  text-align: center;
 }
 
 .comment-item,
@@ -887,6 +898,7 @@
 }
 
 .compact-action {
+  width: auto;
   min-height: 40px;
   padding: 0.55rem 0.9rem;
   border-radius: 12px;
@@ -1502,11 +1514,20 @@
   padding: 1.1rem;
 }
 
-.board-workbench-header {
+.board-workbench-header,
+.board-workbench-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
+}
+
+.board-workbench-header {
+  justify-content: space-between;
+}
+
+.board-workbench-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .board-workbench-header h3 {
@@ -1525,6 +1546,68 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.85rem;
+}
+
+.column-manager {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-muted-bg);
+}
+
+.column-manager .panel-heading {
+  align-items: start;
+}
+
+.column-manager .panel-heading p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.column-create-form,
+.column-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(110px, 0.28fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.column-edit-grid {
+  grid-template-columns: minmax(180px, 1fr) minmax(90px, 0.25fr);
+}
+
+.column-manager-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.column-manager-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.column-manager-item p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.column-manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.danger-action {
+  color: var(--danger);
 }
 
 .invite-form {
@@ -1580,6 +1663,194 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.75rem;
+}
+
+.task-detail-backdrop {
+  place-items: stretch;
+  padding: 1.2rem;
+}
+
+.task-detail-modal {
+  width: min(1480px, 100%);
+  max-height: calc(100vh - 2.4rem);
+  justify-self: center;
+  overflow: auto;
+  display: grid;
+  gap: 1rem;
+  padding: 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.task-detail-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.task-detail-header-actions {
+  display: flex;
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.task-detail-header h2 {
+  margin-bottom: 0.45rem;
+}
+
+.task-detail-header p {
+  max-width: 780px;
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.task-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+
+.task-detail-meta article,
+.task-detail-section {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-muted-bg);
+}
+
+.task-detail-meta span,
+.attachment-item span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.task-detail-meta strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.1rem;
+}
+
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.task-edit-header,
+.task-edit-panel,
+.task-edit-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.task-edit-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.task-detail-section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.task-comments-list,
+.attachment-list,
+.subtask-list,
+.task-detail-main,
+.task-detail-side {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.subtask-progress {
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.subtask-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.subtask-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.subtask-item.is-completed {
+  opacity: 0.78;
+}
+
+.subtask-item.is-completed .subtask-check span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.subtask-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.subtask-check input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
+.subtask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.subtask-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.task-discussion {
+  min-height: 420px;
+  align-content: start;
+}
+
+.task-time-form {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.32fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.attachment-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
 }
 
 .project-overview {
@@ -1830,6 +2101,17 @@
   .inline-create-board,
   .board-directory-tools,
   .project-overview-split,
+  .column-create-form,
+  .column-edit-grid,
+  .column-manager-item,
+  .task-detail-header,
+  .task-detail-meta,
+  .task-detail-grid,
+  .task-edit-grid,
+  .task-time-form,
+  .attachment-item,
+  .subtask-item,
+  .subtask-create,
   .admin-header,
   .dashboard-overview,
   .home-grid,
