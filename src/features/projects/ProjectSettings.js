@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import apiClient, { getApiErrorMessage } from '../../api/apiClient';
+import ProjectAuditLog from '../../components/ProjectAuditLog';
+import { useAuth } from '../../context/AuthContext';
 import { getProjectStatusLabel, projectStatusOptions } from '../../utils/enumLabels';
-import { getProjectId } from '../../utils/projectPermissions';
+import { getProjectId, getProjectPermissions } from '../../utils/projectPermissions';
 
 const ProjectSettings = ({ onProjectUpdated, project }) => {
+  const { user } = useAuth();
   const projectId = getProjectId(project);
+  const permissions = getProjectPermissions({ user, project });
   const [formData, setFormData] = useState({
     name: project.name || '',
     description: project.description || '',
@@ -88,6 +92,15 @@ const ProjectSettings = ({ onProjectUpdated, project }) => {
           {isSaving ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </form>
+
+      {permissions.canViewAudit && (
+        <ProjectAuditLog
+          projectId={projectId}
+          showFilters
+          title="Auditoria del proyecto"
+          subtitle="Eventos completos de gestion, tableros y tareas de este proyecto."
+        />
+      )}
     </section>
   );
 };

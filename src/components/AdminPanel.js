@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import apiClient, { getApiErrorMessage } from '../api/apiClient';
+import ProjectAuditLog from './ProjectAuditLog';
 import { getRoleLabel } from '../utils/enumLabels';
 
 const roleOptions = ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER'];
@@ -239,6 +240,12 @@ const AdminPanel = () => {
           </div>
         )}
       </section>
+
+      <ProjectAuditLog
+        showFilters
+        title="Auditoria global"
+        subtitle="Eventos del sistema, proyectos, tableros, tareas y configuracion."
+      />
     </section>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import apiClient, { getApiErrorMessage } from '../api/apiClient';
 
-const CreateTask = ({ projectId, boardId, columnId, onTaskCreated }) => {
+const CreateTask = ({ columnId, onCancel, onTaskCreated, projectId, boardId }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -57,6 +57,7 @@ const CreateTask = ({ projectId, boardId, columnId, onTaskCreated }) => {
         labelsText: '',
       });
       onTaskCreated();
+      onCancel?.();
     } catch (error) {
       setFeedback(getApiErrorMessage(error, 'No pudimos crear la tarea.'));
     }
@@ -64,21 +65,27 @@ const CreateTask = ({ projectId, boardId, columnId, onTaskCreated }) => {
 
   return (
     <form className="task-form" onSubmit={handleSubmit}>
-      <input
-        name="title"
-        type="text"
-        placeholder="Titulo de la tarea"
-        value={formData.title}
-        onChange={handleChange}
-        required
-      />
-      <textarea
-        name="description"
-        rows="3"
-        placeholder="Descripcion breve"
-        value={formData.description}
-        onChange={handleChange}
-      />
+      <label>
+        Titulo
+        <input
+          name="title"
+          type="text"
+          placeholder="Titulo de la tarea"
+          value={formData.title}
+          onChange={handleChange}
+          required
+        />
+      </label>
+      <label>
+        Descripcion
+        <textarea
+          name="description"
+          rows="4"
+          placeholder="Descripcion breve"
+          value={formData.description}
+          onChange={handleChange}
+        />
+      </label>
 
       <div className="field-row compact-row">
         <label>
@@ -126,7 +133,14 @@ const CreateTask = ({ projectId, boardId, columnId, onTaskCreated }) => {
       </label>
 
       {feedback && <p className="form-error">{feedback}</p>}
-      <button className="primary-button" type="submit">Crear tarea</button>
+      <div className="task-modal-actions">
+        {onCancel && (
+          <button className="ghost-button" type="button" onClick={onCancel}>
+            Cancelar
+          </button>
+        )}
+        <button className="primary-button" type="submit">Crear tarea</button>
+      </div>
     </form>
   );
 };

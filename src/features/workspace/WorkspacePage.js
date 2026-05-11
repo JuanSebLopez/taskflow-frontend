@@ -73,6 +73,7 @@ const WorkspacePage = ({ section = 'workspace' }) => {
   }, [selectedProject]);
 
   const isSettingsRoute = location.pathname.endsWith('/settings');
+  const isBoardsRoute = Boolean(projectId && location.pathname.endsWith('/boards'));
 
   const breadcrumbItems = useMemo(() => {
     if (section === 'admin') {
@@ -91,8 +92,16 @@ const WorkspacePage = ({ section = 'workspace' }) => {
       return [
         { label: 'Proyectos', to: '/app' },
         { label: selectedProject.name, to: `/app/projects/${projectId}` },
-        { label: 'Tableros' },
+        { label: 'Tableros', to: `/app/projects/${projectId}/boards` },
         { label: selectedBoard?.name || 'Tablero' },
+      ];
+    }
+
+    if (isBoardsRoute) {
+      return [
+        { label: 'Proyectos', to: '/app' },
+        { label: selectedProject.name, to: `/app/projects/${projectId}` },
+        { label: 'Tableros' },
       ];
     }
 
@@ -108,7 +117,7 @@ const WorkspacePage = ({ section = 'workspace' }) => {
       { label: 'Proyectos', to: '/app' },
       { label: selectedProject.name },
     ];
-  }, [boardId, isSettingsRoute, projectId, section, selectedBoard?.name, selectedProject]);
+  }, [boardId, isBoardsRoute, isSettingsRoute, projectId, section, selectedBoard?.name, selectedProject]);
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -217,10 +226,6 @@ const WorkspacePage = ({ section = 'workspace' }) => {
           </div>
         </button>
 
-        <div className="topbar-context">
-          {section === 'admin' ? 'Administracion del sistema' : section === 'profile' ? 'Perfil de usuario' : boardId ? 'Tablero' : projectId ? 'Proyecto' : 'Home'}
-        </div>
-
         <div className="topbar-actions">
           <NotificationBell
             isOpen={activeMenu === 'notifications'}
@@ -326,6 +331,8 @@ const WorkspacePage = ({ section = 'workspace' }) => {
               />
             ) : selectedProject && isSettingsRoute ? (
               <ProjectSettings project={selectedProject} onProjectUpdated={setSelectedProject} />
+            ) : selectedProject && isBoardsRoute ? (
+              <ProjectOverview project={selectedProject} view="boards" />
             ) : selectedProject ? (
               <ProjectOverview project={selectedProject} />
             ) : (

@@ -15,11 +15,13 @@ export const getProjectPermissions = ({ user, project }) => {
   const isProjectManager = user?.role === 'PROJECT_MANAGER';
   const isOwner = Boolean(ownerId && userId && ownerId.toString() === userId.toString());
   const isMember = Boolean(membership || isOwner);
+  const projectRole = isOwner ? 'OWNER' : membership?.role || (isAdmin ? 'ADMIN' : 'GUEST');
+  const canViewAuditByProjectRole = ['OWNER', 'PROJECT_MANAGER'].includes(projectRole);
   const isReadOnly = Boolean(project?.isArchived || project?.status === 'ARCHIVADO');
 
   return {
     projectId,
-    projectRole: isOwner ? 'OWNER' : membership?.role || (isAdmin ? 'ADMIN' : 'GUEST'),
+    projectRole,
     isAdmin,
     isOwner,
     isMember,
@@ -31,6 +33,6 @@ export const getProjectPermissions = ({ user, project }) => {
     canManageBoard: !isReadOnly && (isAdmin || isOwner || (isProjectManager && isMember)),
     canCoordinateTasks: !isReadOnly && (isAdmin || isOwner || (isProjectManager && isMember)),
     canAccessAdminPanel: isAdmin,
-    canViewAudit: isAdmin || isOwner || isMember,
+    canViewAudit: isAdmin || isOwner || canViewAuditByProjectRole || (isProjectManager && isMember),
   };
 };

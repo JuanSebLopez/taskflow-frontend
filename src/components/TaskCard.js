@@ -6,14 +6,18 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
   const [nextColumnId, setNextColumnId] = useState(task.columnId);
   const [comment, setComment] = useState('');
   const [hours, setHours] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const taskId = task.id || task._id;
 
   const totalHours = useMemo(() => {
     return (task.timeLogs || []).reduce((sum, item) => sum + (item.hours || 0), 0);
   }, [task.timeLogs]);
 
-  const overdue = task.dueDate && new Date(task.dueDate) < new Date() && !columns.find((column) => column._id === task.columnId)?.title.toLowerCase().includes('complet');
+  const overdue = task.dueDate
+    && new Date(task.dueDate) < new Date()
+    && !columns.find((column) => (column._id || column.id) === task.columnId)?.title.toLowerCase().includes('complet');
   const completedSubtasks = (task.subtasks || []).filter((item) => item.isCompleted).length;
 
   const runAction = async (request) => {
@@ -32,8 +36,49 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
   return (
     <article className={overdue ? 'task-card task-overdue' : 'task-card'}>
       <div className="task-topline">
-        <span className="task-type">{task.type}</span>
-        <span className="status-pill priority-pill">{task.priority}</span>
+        <div className="task-chip-row">
+          <span className="task-type">{task.type}</span>
+          <span className="status-pill priority-pill">{task.priority}</span>
+        </div>
+        {!projectArchived && (
+          <div className="task-menu">
+            <button
+              className="icon-button"
+              type="button"
+              onClick={() => setIsMenuOpen((value) => !value)}
+              aria-label="Opciones de tarea"
+            >
+              ...
+            </button>
+            {isMenuOpen && (
+              <div className="task-menu-popover">
+                <label>
+                  Mover a
+                  <select value={nextColumnId} onChange={(event) => setNextColumnId(event.target.value)}>
+                    {columns.map((column) => (
+                      <option key={column._id || column.id} value={column._id || column.id}>{column.title}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => runAction(() => apiClient.post(`/tasks/${taskId}/move`, { toColumnId: nextColumnId }))}
+                  disabled={nextColumnId === task.columnId}
+                >
+                  Mover
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => runAction(() => apiClient.post(`/tasks/${taskId}/clone`, {}))}
+                >
+                  Clonar
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <h4>{task.title}</h4>
@@ -49,7 +94,7 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
       {!!task.labels?.length && (
         <div className="label-row">
           {task.labels.map((label) => (
-            <span key={`${task._id}-${label.name}`} className="task-label" style={{ backgroundColor: label.color }}>
+            <span key={`${taskId}-${label.name}`} className="task-label" style={{ backgroundColor: label.color }}>
               {label.name}
             </span>
           ))}
@@ -60,32 +105,13 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
         <div className="task-actions-stack">
           <div className="field-row compact-row">
             <label>
-              Mover a
-              <select value={nextColumnId} onChange={(event) => setNextColumnId(event.target.value)}>
-                {columns.map((column) => (
-                  <option key={column._id} value={column._id}>{column.title}</option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/move`, { toColumnId: nextColumnId }))}
-              disabled={nextColumnId === task.columnId}
-            >
-              Mover
-            </button>
-          </div>
-
-          <div className="field-row compact-row">
-            <label>
               Registrar horas
               <input type="number" min="0" step="0.5" value={hours} onChange={(event) => setHours(event.target.value)} />
             </label>
             <button
               className="secondary-button"
               type="button"
-              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/time-logs`, { hours: Number(hours) }))}
+              onClick={() => runAction(() => apiClient.post(`/tasks/${taskId}/time-logs`, { hours: Number(hours) }))}
               disabled={!hours}
             >
               Guardar
@@ -100,17 +126,10 @@ const TaskCard = ({ task, columns, projectArchived, onTaskUpdated }) => {
             <button
               className="secondary-button"
               type="button"
-              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/comments`, { content: comment }))}
+              onClick={() => runAction(() => apiClient.post(`/tasks/${taskId}/comments`, { content: comment }))}
               disabled={!comment.trim()}
             >
               Comentar
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => runAction(() => apiClient.post(`/tasks/${task._id}/clone`, {}))}
-            >
-              Clonar
             </button>
           </div>
         </div>
